@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shadow Fighters | Fixed AI</title>
+    <title>Shadow Fighters | Fixed</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
 
@@ -76,19 +76,21 @@
         @keyframes fadeInDown { to { opacity: 1; transform: translateY(0); } }
 
         /* =========================================
-           ВНЕШНИЙ ВИД ПЕРСОНАЖЕЙ (CSS-АРТ)
+           ВНЕШНИЙ ВИД ПЕРСОНАЖЕЙ
            ========================================= */
         .fighter { 
             position: absolute; 
-            bottom: 110px; /* Жесткая привязка к полу */
+            bottom: 110px; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             transform-origin: bottom center; 
             z-index: 1;
-            /* Убираем transform из базового класса, чтобы не было конфликтов с анимациями */
             transition: filter 0.2s;
         }
+
+        /* Класс для разворота врага (без инлайн-стилей) */
+        .enemy-flip { transform: scaleX(-1); }
 
         .head { border-radius: 50%; margin-bottom: 2px; position: relative; z-index: 2; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .torso { position: relative; z-index: 1; display: flex; justify-content: center; box-shadow: inset -5px -5px 15px rgba(0,0,0,0.4); }
@@ -160,7 +162,6 @@
             width: 60px; height: 110px; 
             background: #e60073; border-radius: 20px 20px 5px 5px; 
             position: relative; 
-            /* transform убран, чтобы не конфликтовать */
             box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5), 0 0 15px rgba(230, 0, 115, 0.4); 
         }
         .kabluk::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 15px; background: #111; border-radius: 5px; }
@@ -192,12 +193,12 @@
         #player-name { left: 40px; color: #00aaff; }
         #enemy-name { right: 40px; color: #ff5500; }
 
-        /* Жесткая фиксация позиций */
+        /* Позиции */
         #player { left: 150px; }
         #enemy { right: 150px; }
 
         /* =========================================
-           АНИМАЦИИ (Используют translate, чтобы не ломать позицию)
+           АНИМАЦИИ
            ========================================= */
         @keyframes shake {
             0% { transform: translate(1px, 1px) rotate(0deg); }
@@ -437,9 +438,9 @@
             const randomEnemyKey = keys[Math.floor(Math.random() * keys.length)];
             enemyChar = CHARACTERS[randomEnemyKey];
 
+            // Применяем классы и разворот
             playerEl.className = `fighter ${playerChar.className}`;
-            enemyEl.className = `fighter ${enemyChar.className}`;
-            enemyEl.style.transform = 'scaleX(-1)'; 
+            enemyEl.className = `fighter enemy-flip ${enemyChar.className}`; // Класс enemy-flip для разворота
 
             playerNameEl.textContent = playerChar.name;
             enemyNameEl.textContent = enemyChar.name;
@@ -488,8 +489,8 @@
             setTimeout(() => selectScreen.style.opacity = '1', 10);
             
             isGameOver = false; playerBlocking = false; canAct = true; aiState = 'idle';
-            playerEl.style.transform = ''; enemyEl.style.transform = '';
-            playerEl.className = 'fighter'; enemyEl.className = 'fighter';
+            playerEl.className = 'fighter'; 
+            enemyEl.className = 'fighter enemy-flip';
             
             const cards = document.querySelectorAll('.char-card');
             cards.forEach(card => {
