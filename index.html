@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Fighters | Street Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: #0a0a0a; color: #fff;
+            font-family: 'Inter', sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; overflow: hidden;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+        }
+
+        /* =========================================
+           ЭКРАН ВЫБОРА ПЕРСОНАЖА
+           ========================================= */
+        #char-select-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at top, #111 0%, #000 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 50; overflow: hidden; transition: opacity 0.5s;
+        }
+
+        #char-select-screen h1 { 
+            font-size: 36px; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 40px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.2); opacity: 0;
+            animation: fadeInDown 0.8s ease forwards;
+        }
+
+        .char-grid { 
+            display: flex; gap: 20px; perspective: 1000px; flex-wrap: wrap; justify-content: center; max-width: 1100px;
+        }
+
+        .char-card {
+            background: linear-gradient(145deg, #1c1c1c, #111);
+            border: 1px solid #333; border-radius: 12px;
+            padding: 20px 15px; cursor: pointer; text-align: center; width: 190px;
+            position: relative;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0; transform: translateY(50px);
+            animation: slideInCard 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .char-card:nth-child(1) { animation-delay: 0.2s; transform: translateX(-100px) translateY(50px); }
+        .char-card:nth-child(2) { animation-delay: 0.3s; transform: translateX(-50px) translateY(50px); }
+        .char-card:nth-child(3) { animation-delay: 0.4s; transform: translateY(50px); }
+        .char-card:nth-child(4) { animation-delay: 0.5s; transform: translateX(50px) translateY(50px); }
+        .char-card:nth-child(5) { animation-delay: 0.6s; transform: translateX(100px) translateY(50px); }
+
+        .char-card:hover { 
+            border-color: #00aaff; transform: translateY(-10px) scale(1.05); 
+            box-shadow: 0 20px 40px rgba(0, 170, 255, 0.2), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        .char-card h3 { margin: 10px 0 5px 0; font-size: 18px; font-weight: 900; letter-spacing: 1px; }
+        .char-card p { margin: 0; font-size: 11px; color: #888; font-weight: 400; }
+        
+        .stats { margin-top: 10px; display: flex; justify-content: center; gap: 5px; }
+        .stat-dot { width: 6px; height: 6px; border-radius: 50%; background: #333; }
+        .stat-dot.active { background: #00aaff; box-shadow: 0 0 5px #00aaff; }
+
+        .preview-figure { height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; margin-bottom: 10px; position: relative; }
+        .preview-figure::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80px; height: 80px; background: rgba(0, 170, 255, 0.1); filter: blur(25px); border-radius: 50%; z-index: 0; transition: 0.3s; }
+        .char-card:hover .preview-figure::before { background: rgba(0, 170, 255, 0.3); width: 100px; height: 100px; }
+
+        @keyframes slideInCard { to { opacity: 1; transform: translateX(0) translateY(0); } }
+        @keyframes fadeInDown { to { opacity: 1; transform: translateY(0); } }
+
+        /* =========================================
+           ВНЕШНИЙ ВИД ПЕРСОНАЖЕЙ (CSS-АРТ)
+           ========================================= */
+        .fighter { 
+            position: absolute; bottom: 110px; 
+            display: flex; flex-direction: column; align-items: center; 
+            transition: transform 0.1s; transform-origin: bottom center; z-index: 1;
+        }
+
+        .head { 
+            border-radius: 50%; margin-bottom: 2px; position: relative; z-index: 2; 
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .torso { position: relative; z-index: 1; display: flex; justify-content: center; box-shadow: inset -5px -5px 15px rgba(0,0,0,0.4); }
+        .legs { display: flex; gap: 4px; z-index: 0; }
+        .leg { border-radius: 0 0 4px 4px; box-shadow: inset -3px -3px 5px rgba(0,0,0,0.3); }
+        .arm { position: absolute; border-radius: 10px; top: 5px; z-index: 0; box-shadow: inset -3px -3px 5px rgba(0,0,0,0.3); transition: transform 0.2s; }
+
+        /* ЛИЦА */
+        .eye { width: 6px; height: 6px; background: #111; border-radius: 50%; position: absolute; top: 40%; }
+        .eye.left { left: 25%; }
+        .eye.right { right: 25%; }
+        .brow { width: 8px; height: 2px; background: #222; position: absolute; top: 30%; }
+        .brow.left { left: 20%; transform: rotate(10deg); }
+        .brow.right { right: 20%; transform: rotate(-10deg); }
+        .mouth { width: 12px; height: 3px; background: #333; position: absolute; bottom: 25%; border-radius: 2px; }
+
+        /* --- СКУФ --- */
+        .squf .head { width: 45px; height: 45px; background: #e0ac69; }
+        .squf .head::after { content: ''; position: absolute; top: -8px; left: 2px; right: 2px; height: 20px; background: #2a2a2a; border-radius: 50% 50% 10px 10px; }
+        .squf .torso { width: 85px; height: 65px; background: #f0f0f0; border-radius: 15px 15px 10px 10px; }
+        .squf .torso::after { content: ''; position: absolute; bottom: -10px; left: 0; width: 100%; height: 20px; background: #4da6ff; border-radius: 5px; }
+        .squf .leg { width: 26px; height: 35px; background: #e0ac69; }
+        .squf .arm { background: #e0ac69; height: 35px; width: 14px; }
+        .squf .arm.left { left: -12px; transform: rotate(20deg); }
+        .squf .arm.right { right: -12px; transform: rotate(-20deg); }
+        .squf .mouth { width: 10px; height: 2px; transform: rotate(-5deg); } 
+        .squf { transform: scale(0.95) translateY(15px); }
+
+        /* --- КАЧЁК --- */
+        .jock .head { width: 35px; height: 35px; background: #d2a679; }
+        .jock .torso { width: 75px; height: 65px; background: #1a1a1a; border-radius: 12px; clip-path: polygon(10% 0, 90% 0, 100% 100%, 0% 100%); }
+        .jock .torso::after { content: ''; position: absolute; top: 15px; left: 15px; right: 15px; height: 2px; background: #333; box-shadow: 0 8px 0 #333, 0 16px 0 #333; }
+        .jock .leg { width: 24px; height: 45px; background: #555; }
+        .jock .arm { background: #d2a679; height: 45px; width: 18px; }
+        .jock .arm.left { left: -14px; transform: rotate(10deg); }
+        .jock .arm.right { right: -14px; transform: rotate(-10deg); }
+        .jock .brow { transform: rotate(0); } 
+        .jock .brow.left { left: 15%; }
+        .jock .brow.right { right: 15%; }
+        .jock { transform: scale(1); }
+
+        /* --- МОДНИК --- */
+        .fashion .head { width: 30px; height: 38px; background: #e8c396; border-radius: 40%; }
+        .fashion .head::after { content: ''; position: absolute; top: -12px; left: -6px; right: -6px; height: 22px; background: #d4af37; border-radius: 6px; border-bottom: 3px solid #a68627; }
+        .fashion .torso { width: 90px; height: 80px; background: #222; border-radius: 25px; border: 2px solid #444; }
+        .fashion .torso::after { content: ''; position: absolute; top: 10px; left: 5px; right: 5px; height: 1px; background: #444; box-shadow: 0 15px 0 #444, 0 30px 0 #444, 0 45px 0 #444; }
+        .fashion .leg { width: 16px; height: 60px; background: #111; border-radius: 2px; }
+        .fashion .arm { background: #222; height: 45px; width: 18px; border: 1px solid #444; border-radius: 12px; }
+        .fashion .arm.left { left: -16px; transform: rotate(5deg); }
+        .fashion .arm.right { right: -16px; transform: rotate(-5deg); }
+        .fashion .eye { width: 4px; height: 4px; }
+        .fashion .mouth { width: 8px; height: 2px; }
+        .fashion { transform: scale(1) translateY(-20px); }
+
+        /* --- МУЖЛАН --- */
+        .muzhlan .head { width: 50px; height: 50px; background: #c78c5c; border-radius: 40%; }
+        .muzhlan .head::after { content: ''; position: absolute; top: -5px; left: 10px; right: 10px; height: 15px; background: #111; border-radius: 5px; }
+        .muzhlan .torso { width: 110px; height: 85px; background: #ff69b4; border-radius: 20px; }
+        .muzhlan .torso::before { content: ''; position: absolute; top: 10px; left: 25px; right: 25px; height: 40px; background: #fff; border-radius: 10px; opacity: 0.3; }
+        .muzhlan .leg { width: 30px; height: 40px; background: #333; }
+        .muzhlan .arm { background: #c78c5c; height: 55px; width: 24px; border-radius: 12px; }
+        .muzhlan .arm.left { left: -18px; transform: rotate(15deg); }
+        .muzhlan .arm.right { right: -18px; transform: rotate(-15deg); }
+        .muzhlan .brow { background: #000; width: 12px; height: 3px; }
+        .muzhlan .brow.left { left: 15%; transform: rotate(20deg); }
+        .muzhlan .brow.right { right: 15%; transform: rotate(-20deg); }
+        .muzhlan .mouth { width: 15px; height: 4px; background: #500; border-radius: 0 0 5px 5px; }
+        .muzhlan { transform: scale(1.1) translateY(10px); }
+
+        /* --- КАБЛУК --- */
+        .kabluk .head { display: none; } 
+        .kabluk .torso { display: none; } 
+        .kabluk .arm { display: none; } 
+        .kabluk .legs { display: none; } 
+        
+        .kabluk { 
+            width: 60px; height: 110px; 
+            background: #e60073; 
+            border-radius: 20px 20px 5px 5px;
+            position: relative;
+            transform: scale(1) translateY(10px);
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.5), 0 0 15px rgba(230, 0, 115, 0.4);
+        }
+        .kabluk::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 15px; background: #111; border-radius: 5px; }
+        .kabluk::after { content: ''; position: absolute; bottom: -30px; right: 10px; width: 10px; height: 30px; background: #111; border-radius: 0 0 5px 5px; }
+        .kabluk .eye { display: block; width: 10px; height: 10px; background: #fff; border-radius: 50%; top: 30%; box-shadow: 0 0 10px #fff; }
+        .kabluk .eye.left { left: 15px; }
+        .kabluk .eye.right { right: 15px; }
+        .kabluk .mouth { display: block; width: 20px; height: 10px; background: #111; border-radius: 10px 10px 0 0; bottom: 20%; left: 50%; transform: translateX(-50%); }
+
+        /* =========================================
+           ИГРОВОЕ ПОЛЕ
+           ========================================= */
+        #game-container {
+            position: relative; width: 900px; height: 500px;
+            background: linear-gradient(to bottom, #111, #222);
+            border: 4px solid #333; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            display: none;
+        }
+        .floor { position: absolute; bottom: 0; width: 100%; height: 120px; background: linear-gradient(to bottom, #1a1a1a, #000); border-top: 2px solid #444; }
+
+        /* UI */
+        .ui-container { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 10; }
+        .health-bar-container { width: 350px; height: 24px; background: #222; border: 2px solid #555; border-radius: 4px; overflow: hidden; box-shadow: inset 0 0 10px #000; }
+        .health-bar { height: 100%; width: 100%; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        #player-health { background: linear-gradient(90deg, #0055ff, #00aaff); float: right; box-shadow: 0 0 10px #00aaff; }
+        #enemy-health { background: linear-gradient(90deg, #ff0055, #ff5500); float: left; box-shadow: 0 0 10px #ff5500; }
+        .fighter-name { position: absolute; top: 50px; font-weight: 900; font-size: 18px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px currentColor; }
+        #player-name { left: 40px; color: #00aaff; }
+        #enemy-name { right: 40px; color: #ff5500; }
+
+        /* Жесткая фиксация позиций */
+        #player { left: 150px; }
+        #enemy { right: 150px; }
+
+        /* =========================================
+           АНИМАЦИИ И ЭФФЕКТЫ
+           ========================================= */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+
+        @keyframes flashDamage { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(3) drop-shadow(0 0 20px red); } }
+        .hit { animation: flashDamage 0.3s ease; }
+
+        /* Убираем сильное смещение при отбрасывании, чтобы не вылетали */
+        @keyframes knockbackRight { 0% { transform: translateX(0); } 50% { transform: translateX(20px) rotate(5deg); } 100% { transform: translateX(0) rotate(0); } }
+        @keyframes knockbackLeft { 0% { transform: translateX(0); } 50% { transform: translateX(-20px) rotate(-5deg); } 100% { transform: translateX(0) rotate(0); } }
+        .knockback-p { animation: knockbackRight 0.3s ease-out; }
+        .knockback-e { animation: knockbackLeft 0.3s ease-out; }
+
+        .block-p { transform: scale(0.9) translateX(5px) !important; filter: brightness(0.7) contrast(1.2); transition: 0.1s; }
+        .block-e { transform: scaleX(-0.9) translateX(5px) !important; filter: brightness(0.7) contrast(1.2); transition: 0.1s; }
+
+        /* Удары (сокращены дистанции, чтобы не вылетали) */
+        @keyframes squfPunch { 0% { transform: scale(0.95) translateY(15px) rotate(0deg); } 30% { transform: scale(0.95) translateY(15px) rotate(-15deg) translateX(15px); } 100% { transform: scale(0.95) translateY(15px) rotate(0deg); } }
+        .squf.attack-p { animation: squfPunch 0.4s ease-out; }
+        @keyframes squfKick { 0% { transform: scale(0.95) translateY(15px) translateX(0); } 40% { transform: scale(0.95) translateY(15px) translateX(40px) scaleX(1.1); } 100% { transform: scale(0.95) translateY(15px) translateX(0); } }
+        .squf.attack-k { animation: squfKick 0.5s ease-out; }
+
+        @keyframes jockPunch { 0% { transform: scale(1) translateX(0); } 50% { transform: scale(1) translateX(50px) rotate(5deg); } 100% { transform: scale(1) translateX(0); } }
+        .jock.attack-p { animation: jockPunch 0.3s ease-out; }
+        @keyframes jockKick { 0% { transform: scale(1) translateY(0) rotate(0); } 30% { transform: scale(1) translateY(10px) rotate(-5deg); } 60% { transform: scale(1) translateY(-10px) translateX(40px) rotate(10deg); } 100% { transform: scale(1) translateY(0) rotate(0); } }
+        .jock.attack-k { animation: jockKick 0.5s ease-out; }
+
+        @keyframes fashionPunch { 0% { transform: scale(1) translateY(-20px) rotate(0); } 30% { transform: scale(1) translateY(-20px) translateX(50px) rotate(10deg); } 100% { transform: scale(1) translateY(-20px) rotate(0); } }
+        .fashion.attack-p { animation: fashionPunch 0.25s ease-out; }
+        @keyframes fashionKick { 0% { transform: scale(1) translateY(-20px) rotate(0); } 30% { transform: scale(1) translateY(-20px) rotate(-10deg); } 60% { transform: scale(1) translateY(-20px) translateX(60px) rotate(-5deg); } 100% { transform: scale(1) translateY(-20px) rotate(0); } }
+        .fashion.attack-k { animation: fashionKick 0.4s ease-out; }
+
+        @keyframes muzhlanPunch { 0% { transform: scale(1.1) translateY(10px) rotate(0); } 40% { transform: scale(1.1) translateY(10px) rotate(-5deg) translateX(20px); } 100% { transform: scale(1.1) translateY(10px) rotate(0); } }
+        .muzhlan.attack-p { animation: muzhlanPunch 0.5s ease-out; }
+        @keyframes muzhlanKick { 0% { transform: scale(1.1) translateY(10px) translateX(0); } 50% { transform: scale(1.1) translateY(-5px) translateX(50px) rotate(10deg); } 100% { transform: scale(1.1) translateY(10px) translateX(0); } }
+        .muzhlan.attack-k { animation: muzhlanKick 0.6s ease-out; }
+
+        @keyframes kablukPunch { 0% { transform: scale(1) translateY(10px) rotate(0); } 50% { transform: scale(1) translateY(-10px) translateX(40px) rotate(-15deg); } 100% { transform: scale(1) translateY(10px) rotate(0); } }
+        .kabluk.attack-p { animation: kablukPunch 0.3s ease-out; }
+        @keyframes kablukKick { 0% { transform: scale(1) translateY(10px) rotate(0); } 50% { transform: scale(1) translateY(-15px) translateX(50px) rotate(20deg) scale(1.1); } 100% { transform: scale(1) translateY(10px) rotate(0); } }
+        .kabluk.attack-k { animation: kablukKick 0.4s ease-out; }
+
+        .particle {
+            position: absolute; width: 6px; height: 6px; background: #fff; border-radius: 50%; pointer-events: none; z-index: 100; box-shadow: 0 0 10px #fff, 0 0 20px #ff0055;
+        }
+        @keyframes particleFly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; } }
+
+        .controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 10; }
+        .controls-left, .controls-right { display: flex; gap: 15px; }
+        button.action-btn { background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2); color: white; padding: 10px 20px; font-family: 'Inter', sans-serif; font-weight: 700; text-transform: uppercase; cursor: pointer; border-radius: 8px; transition: 0.2s; backdrop-filter: blur(5px); }
+        button.action-btn:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); transform: scale(1.05); }
+        button.action-btn:active { transform: scale(0.95); }
+        button.action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        #result-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 20; backdrop-filter: blur(10px); }
+        #result-screen h1 { font-size: 64px; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 4px; text-shadow: 0 0 20px rgba(255,255,255,0.5); }
+        #result-screen p { font-size: 18px; color: #aaa; margin-bottom: 40px; }
+        .restart-btn { font-size: 18px; padding: 15px 40px; background: #fff; color: #000; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; transition: 0.2s; }
+        .restart-btn:hover { background: #00aaff; color: #fff; box-shadow: 0 0 20px #00aaff; }
+
+        @media (max-width: 950px) {
+            #game-container { width: 100vw; height: 100vh; border-radius: 0; border: none; }
+            .health-bar-container { width: 40vw; }
+            #player { left: 10vw; }
+            #enemy { right: 10vw; }
+            .controls { flex-direction: column; align-items: center; gap: 10px; padding-bottom: 20px;}
+            .controls-left, .controls-right { width: 100%; justify-content: center; }
+            button.action-btn { padding: 8px 16px; font-size: 12px; }
+            .char-grid { gap: 10px; transform: scale(0.8); }
+            #char-select-screen h1 { font-size: 24px; margin-bottom: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ЭКРАН ВЫБОРА -->
+    <div id="char-select-screen">
+        <h1>Выбери бойца</h1>
+        <div class="char-grid">
+            <!-- Скуф -->
+            <div class="char-card" onclick="selectChar('squf')">
+                <div class="preview-figure">
+                    <div class="fighter squf">
+                        <div class="arm left"></div><div class="arm right"></div>
+                        <div class="head"><div class="brow left"></div><div class="brow right"></div><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div>
+                        <div class="torso"></div>
+                        <div class="legs"><div class="leg"></div><div class="leg"></div></div>
+                    </div>
+                </div>
+                <h3>Скуф</h3>
+                <p>Толстый, в майке</p>
+                <div class="stats">
+                    <div class="stat-dot active"></div><div class="stat-dot active"></div><div class="stat-dot active"></div><div class="stat-dot"></div>
+                </div>
+            </div>
+            <!-- Качёк -->
+            <div class="char-card" onclick="selectChar('jock')">
+                <div class="preview-figure">
+                    <div class="fighter jock">
+                        <div class="arm left"></div><div class="arm right"></div>
+                        <div class="head"><div class="brow left"></div><div class="brow right"></div><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div>
+                        <div class="torso"></div>
+                        <div class="legs"><div class="leg"></div><div class="leg"></div></div>
+                    </div>
+                </div>
+                <h3>Качёк</h3>
+                <p>Спортивный, в черном</p>
+                <div class="stats">
+                    <div class="stat-dot active"></div><div class="stat-dot active"></div><div class="stat-dot"></div><div class="stat-dot"></div>
+                </div>
+            </div>
+            <!-- Модник -->
+            <div class="char-card" onclick="selectChar('fashion')">
+                <div class="preview-figure">
+                    <div class="fighter fashion">
+                        <div class="arm left"></div><div class="arm right"></div>
+                        <div class="head"><div class="brow left"></div><div class="brow right"></div><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div>
+                        <div class="torso"></div>
+                        <div class="legs"><div class="leg"></div><div class="leg"></div></div>
+                    </div>
+                </div>
+                <h3>Модник</h3>
+                <p>Высокий, в пуховике</p>
+                <div class="stats">
+                    <div class="stat-dot active"></div><div class="stat-dot"></div><div class="stat-dot"></div><div class="stat-dot"></div>
+                </div>
+            </div>
+            <!-- Мужлан -->
+            <div class="char-card" onclick="selectChar('muzhlan')">
+                <div class="preview-figure">
+                    <div class="fighter muzhlan">
+                        <div class="arm left"></div><div class="arm right"></div>
+                        <div class="head"><div class="brow left"></div><div class="brow right"></div><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div>
+                        <div class="torso"></div>
+                        <div class="legs"><div class="leg"></div><div class="leg"></div></div>
+                    </div>
+                </div>
+                <h3>Мужлан</h3>
+                <p>Огромный, в розовом</p>
+                <div class="stats">
+                    <div class="stat-dot active"></div><div class="stat-dot active"></div><div class="stat-dot active"></div><div class="stat-dot active"></div>
+                </div>
+            </div>
+            <!-- Каблук -->
+            <div class="char-card" onclick="selectChar('kabluk')">
+                <div class="preview-figure">
+                    <div class="fighter kabluk">
+                        <div class="eye left"></div><div class="eye right"></div><div class="mouth"></div>
+                    </div>
+                </div>
+                <h3>Каблук</h3>
+                <p>Просто каблук</p>
+                <div class="stats">
+                    <div class="stat-dot active"></div><div class="stat-dot active"></div><div class="stat-dot"></div><div class="stat-dot"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ИГРА -->
+    <div id="game-container">
+        <div class="ui-container">
+            <div class="fighter-name" id="player-name">PLAYER</div>
+            <div class="health-bar-container"><div class="health-bar" id="player-health"></div></div>
+            <div class="health-bar-container"><div class="health-bar" id="enemy-health"></div></div>
+            <div class="fighter-name" id="enemy-name">AI BOT</div>
+        </div>
+
+        <div class="floor"></div>
+
+        <!-- Игрок -->
+        <div class="fighter" id="player">
+            <div class="arm left"></div><div class="arm right"></div>
+            <div class="head"><div class="brow left"></div><div class="brow right"></div><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div>
+            <div class="torso"></div>
+            <div class="legs"><div class="leg"></div><div class="leg"></div></div>
+        </div>
+
+        <!-- Враг -->
+        <div class="fighter" id="enemy">
+            <div class="arm left"></div><div class="arm right"></div>
+            <div class="head"><div class="brow left"></div><div class="brow right"></div><div class="eye left"></div><div class="eye right"></div><div class="mouth"></div></div>
+            <div class="torso"></div>
+            <div class="legs"><div class="leg"></div><div class="leg"></div></div>
+        </div>
+
+        <div class="controls">
+            <div class="controls-left">
+                <button class="action-btn" id="btn-punch">Punch (A)</button>
+                <button class="action-btn" id="btn-kick">Kick (S)</button>
+            </div>
+            <div class="controls-right">
+                <button class="action-btn" id="btn-block">Block (D)</button>
+            </div>
+        </div>
+
+        <div id="result-screen">
+            <h1 id="result-text">VICTORY</h1>
+            <p id="result-subtext">You defeated the AI</p>
+            <button class="restart-btn" id="btn-restart">FIGHT AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const CHARACTERS = {
+            squf: { name: 'СКУФ', hp: 120, dmgPunch: 10, dmgKick: 15, speed: 0.8, className: 'squf' },
+            jock: { name: 'КАЧЁК', hp: 100, dmgPunch: 14, dmgKick: 20, speed: 1.0, className: 'jock' },
+            fashion: { name: 'МОДНИК', hp: 80, dmgPunch: 8, dmgKick: 12, speed: 1.3, className: 'fashion' },
+            muzhlan: { name: 'МУЖЛАН', hp: 150, dmgPunch: 18, dmgKick: 25, speed: 0.6, className: 'muzhlan' },
+            kabluk: { name: 'КАБЛУК', hp: 90, dmgPunch: 12, dmgKick: 18, speed: 1.2, className: 'kabluk' }
+        };
+
+        const selectScreen = document.getElementById('char-select-screen');
+        const gameContainer = document.getElementById('game-container');
+        const playerEl = document.getElementById('player');
+        const enemyEl = document.getElementById('enemy');
+        const playerHealthEl = document.getElementById('player-health');
+        const enemyHealthEl = document.getElementById('enemy-health');
+        const playerNameEl = document.getElementById('player-name');
+        const enemyNameEl = document.getElementById('enemy-name');
+        const resultScreen = document.getElementById('result-screen');
+        const resultText = document.getElementById('result-text');
+        const resultSubtext = document.getElementById('result-subtext');
+        
+        const btnPunch = document.getElementById('btn-punch');
+        const btnKick = document.getElementById('btn-kick');
+        const btnBlock = document.getElementById('btn-block');
+
+        let pMaxHp, eMaxHp, pHealth, eHealth;
+        let playerChar, enemyChar;
+        let isGameOver = false;
+        let playerBlocking = false;
+        let canAct = true;
+        let aiState = 'idle';
+        let aiTimer = null;
+        let aiActionInterval = 1500;
+        
+        // Блокировка кнопок во время анимации
+        function setButtonsState(state) {
+            btnPunch.disabled = !state;
+            btnKick.disabled = !state;
+            btnBlock.disabled = !state;
+        }
+
+        window.selectChar = function(charKey) {
+            playerChar = CHARACTERS[charKey];
+            const keys = Object.keys(CHARACTERS).filter(k => k !== charKey);
+            const randomEnemyKey = keys[Math.floor(Math.random() * keys.length)];
+            enemyChar = CHARACTERS[randomEnemyKey];
+
+            playerEl.className = `fighter ${playerChar.className}`;
+            enemyEl.className = `fighter ${enemyChar.className}`;
+            enemyEl.style.transform = 'scaleX(-1)'; 
+
+            playerNameEl.textContent = playerChar.name;
+            enemyNameEl.textContent = enemyChar.name;
+
+            pMaxHp = playerChar.hp; eMaxHp = enemyChar.hp;
+            pHealth = pMaxHp; eHealth = eMaxHp;
+            aiActionInterval = 1500 / enemyChar.speed;
+
+            selectScreen.style.opacity = '0';
+            setTimeout(() => {
+                selectScreen.style.display = 'none';
+                gameContainer.style.display = 'block';
+                updateHealthUI();
+                startAI();
+                setButtonsState(true);
+            }, 500);
+        };
+
+        function updateHealthUI() {
+            playerHealthEl.style.width = Math.max(0, (pHealth / pMaxHp) * 100) + '%';
+            enemyHealthEl.style.width = Math.max(0, (eHealth / eMaxHp) * 100) + '%';
+            if (pHealth <= 0 && !isGameOver) endGame(false);
+            if (eHealth <= 0 && !isGameOver) endGame(true);
+        }
+
+        function endGame(playerWon) {
+            isGameOver = true;
+            if(aiTimer) clearInterval(aiTimer);
+            resultScreen.style.display = 'flex';
+            if (playerWon) {
+                resultText.textContent = 'VICTORY';
+                resultText.style.color = '#00aaff';
+                resultSubtext.textContent = `Вы победили ${enemyChar.name}!`;
+            } else {
+                resultText.textContent = 'DEFEAT';
+                resultText.style.color = '#ff5500';
+                resultSubtext.textContent = `${enemyChar.name} оказался сильнее...`;
+            }
+        }
+
+        function resetGame() {
+            resultScreen.style.display = 'none';
+            gameContainer.style.display = 'none';
+            selectScreen.style.display = 'flex';
+            setTimeout(() => selectScreen.style.opacity = '1', 10);
+            
+            isGameOver = false; playerBlocking = false; canAct = true; aiState = 'idle';
+            playerEl.style.transform = ''; enemyEl.style.transform = '';
+            playerEl.className = 'fighter'; enemyEl.className = 'fighter';
+            
+            const cards = document.querySelectorAll('.char-card');
+            cards.forEach(card => {
+                card.style.animation = 'none';
+                card.offsetHeight; 
+                card.style.animation = null; 
+            });
+        }
+
+        function createParticles(x, y) {
+            const container = document.getElementById('game-container');
+            const colors = ['#fff', '#ff0055', '#00aaff', '#ffaa00'];
+            
+            for (let i = 0; i < 12; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                p.style.boxShadow = `0 0 10px ${p.style.background}`;
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 20 + Math.random() * 60; // Меньше разлет
+                p.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+                p.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+                
+                const duration = 0.3 + Math.random() * 0.3;
+                p.style.animation = `particleFly ${duration}s ease-out forwards`;
+                
+                container.appendChild(p);
+                setTimeout(() => p.remove(), duration * 1000);
+            }
+        }
+
+        function shakeScreen() {
+            const container = document.getElementById('game-container');
+            container.classList.add('shake');
+            setTimeout(() => container.classList.remove('shake'), 300);
+        }
+
+        function playerAction(action) {
+            if (isGameOver || !canAct) return;
+            
+            canAct = false;
+            setButtonsState(false); // Блокируем кнопки
+
+            if (action === 'punch' || action === 'kick') {
+                const isPunch = action === 'punch';
+                const animClass = isPunch ? 'attack-p' : 'attack-k';
+                
+                playerEl.classList.add(animClass);
+                setTimeout(() => playerEl.classList.remove(animClass), 400);
+                
+                const baseDmg = isPunch ? playerChar.dmgPunch : playerChar.dmgKick;
+                const hitChance = isPunch ? 0.85 : 0.65;
+                const cooldown = isPunch ? 400 : 600;
+
+                setTimeout(() => {
+                    if (Math.random() < hitChance) {
+                        if (aiState === 'block') {
+                            enemyEl.classList.add('block-e');
+                            setTimeout(() => enemyEl.classList.remove('block-e'), 300);
+                            createParticles(750, 300);
+                        } else {
+                            eHealth -= baseDmg;
+                            updateHealthUI();
+                            
+                            enemyEl.classList.add('hit', 'knockback-e');
+                            shakeScreen();
+                            createParticles(750, 300);
+                            
+                            setTimeout(() => enemyEl.classList.remove('hit', 'knockback-e'), 300);
+                        }
+                    }
+                }, 150);
+
+                setTimeout(() => { 
+                    canAct = true; 
+                    setButtonsState(true); 
+                }, cooldown);
+
+            } else if (action === 'block') {
+                playerBlocking = true;
+                playerEl.classList.add('block-p');
+                setTimeout(() => {
+                    playerBlocking = false;
+                    playerEl.classList.remove('block-p');
+                    canAct = true;
+                    setButtonsState(true);
+                }, 600);
+            }
+        }
+
+        function startAI() {
+            if (aiTimer) clearInterval(aiTimer);
+            
+            aiTimer = setInterval(() => {
+                if (isGameOver) return;
+
+                const rand = Math.random();
+                
+                if (rand < 0.4) {
+                    aiState = 'attack';
+                    const isKick = Math.random() > 0.5;
+                    const animClass = isKick ? 'attack-k' : 'attack-p';
+                    
+                    enemyEl.classList.add(animClass);
+                    setTimeout(() => enemyEl.classList.remove(animClass), 400);
+
+                    setTimeout(() => {
+                        if (Math.random() > 0.25) { 
+                            if (!playerBlocking) {
+                                const dmg = isKick ? enemyChar.dmgKick : enemyChar.dmgPunch;
+                                pHealth -= dmg;
+                                updateHealthUI();
+                                
+                                playerEl.classList.add('hit', 'knockback-p');
+                                shakeScreen();
+                                createParticles(250, 300);
+                                
+                                setTimeout(() => playerEl.classList.remove('hit', 'knockback-p'), 300);
+                            } else {
+                                createParticles(250, 300);
+                            }
+                        }
+                    }, 150);
+
+                } else if (rand < 0.7) {
+                    aiState = 'block';
+                    enemyEl.classList.add('block-e');
+                    setTimeout(() => {
+                        enemyEl.classList.remove('block-e');
+                        aiState = 'idle';
+                    }, 800);
+                } else {
+                    aiState = 'idle';
+                }
+
+            }, aiActionInterval);
+        }
+
+        btnPunch.addEventListener('click', () => playerAction('punch'));
+        btnKick.addEventListener('click', () => playerAction('kick'));
+        btnBlock.addEventListener('click', () => playerAction('block'));
+        document.getElementById('btn-restart').addEventListener('click', resetGame);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat || isGameOver || !canAct) return;
+            const k = e.key.toLowerCase();
+            if (k === 'a' || k === 'ф') playerAction('punch');
+            if (k === 's' || k === 'ы') playerAction('kick');
+            if (k === 'd' || k === 'в') playerAction('block');
+        });
+    </script>
+</body>
+</html>
